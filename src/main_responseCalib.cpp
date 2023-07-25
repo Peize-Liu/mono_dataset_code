@@ -177,10 +177,19 @@ void parseArgument(char* arg)
 int main( int argc, char** argv )
 {
 	// parse arguments
-	for(int i=2; i<argc;i++)
+	for(int i=3; i<argc;i++)
 		parseArgument(argv[i]);
-
-
+	std::string resualt_save_path;
+	printf("ARGC:%d\n",argc);
+	if(argc == 3){
+		resualt_save_path = std::string(argv [2]);
+		printf("The resualt of this calibration would be save in %s\n", resualt_save_path.c_str());
+	}
+	std::string resualt_dir_name = std::string("/ResponseCalibResult/");
+	printf("resualt_save_path = %s\n",resualt_save_path.c_str());
+	printf("resualt_dir_name = %s\n",resualt_dir_name.c_str());
+	std::string resualt_save_dir = resualt_save_path + resualt_dir_name;
+	printf("resualt_save_dir = %s\n",resualt_save_dir.c_str());
 	// load exposure times & images.
 	// first parameter is dataset location.
 	int w=0,h=0,n=0;
@@ -258,19 +267,25 @@ int main( int argc, char** argv )
 		}
 	for(int k=0;k<w*h;k++) E[k] = E[k]/En[k];
 
+	std::string rm_resualt = std::string ("rm -rf ") + resualt_save_dir;
+	std::string mkdir_resualt = std::string ("mkdir -p ") + resualt_save_dir;
+	if(-1 == system(rm_resualt.c_str())) printf("could not delete old vignetteCalibResult folder!\n");
+	if(-1 == system(mkdir_resualt.c_str())) printf("could not delete old vignetteCalibResult folder!\n");
 
-
-	if(-1 == system("rm -rf photoCalibResult")) printf("could not delete old photoCalibResult folder!\n");
-	if(-1 == system("mkdir photoCalibResult")) printf("could not create photoCalibResult folder!\n");
+	// if(-1 == system("rm -rf photoCalibResult")) printf("could not delete old photoCalibResult folder!\n");
+	// if(-1 == system("mkdir photoCalibResult")) printf("could not create photoCalibResult folder!\n");
 
 
 	std::ofstream logFile;
-	logFile.open("photoCalibResult/log.txt", std::ios::trunc | std::ios::out);
+	std::string log_file_path = resualt_save_dir + std::string("/log.txt");
+	logFile.open(log_file_path.c_str(), std::ios::trunc | std::ios::out);
 	logFile.precision(15);
 
 
 	printf("init RMSE = %f! \t", rmse(G, E, exposureVec, dataVec, w*h )[0]);
-	plotE(E,w,h, "photoCalibResult/E-0");
+	std::string plot_E_path = resualt_save_dir + std::string("/E-0");
+	printf("[Debug]: plot E is going to save at%s\n",plot_E_path.c_str()); 
+	plotE(E,w,h, plot_E_path.c_str());
 	cv::waitKey(100);
 
 
@@ -305,9 +320,11 @@ int main( int argc, char** argv )
 			delete[] GSum;
 			delete[] GNum;
 			printf("optG RMSE = %f! \t", rmse(G, E, exposureVec, dataVec, w*h )[0]);
-
-			char buf[1000]; snprintf(buf, 1000, "photoCalibResult/G-%d.png", it+1);
-			plotG(G, buf);
+			std::string G_path = resualt_save_dir + std::string("/G-") + std::to_string(it+1) + std::string(".png");
+			printf("[Debug]:G png is saved to %s\n",G_path.c_str());
+			// char buf[1000]; 
+			// snprintf(buf, 1000, "photoCalibResult/G-%d.png", it+1);
+			plotG(G, G_path.c_str());
 		}
 
 
@@ -340,9 +357,10 @@ int main( int argc, char** argv )
 			delete[] ENum;
 			delete[] ESum;
 			printf("OptE RMSE = %f!  \t", rmse(G, E, exposureVec, dataVec, w*h )[0]);
-
-			char buf[1000]; snprintf(buf, 1000, "photoCalibResult/E-%d", it+1);
-			plotE(E,w,h, buf);
+			std::string opt_E = resualt_save_dir + std::string("/E-") + std::to_string(it+1);
+			printf("[Debug]:OptE is saved at: %s\n",opt_E.c_str());
+			// char buf[1000]; snprintf(buf, 1000, "photoCalibResult/E-%d", it+1);
+			plotE(E,w,h, opt_E.c_str());
 		}
 
 
@@ -365,7 +383,9 @@ int main( int argc, char** argv )
 	logFile.close();
 
 	std::ofstream lg;
-	lg.open("photoCalibResult/pcalib.txt", std::ios::trunc | std::ios::out);
+	std::string pcalib_path = resualt_save_dir + std::string("/pcalib.txt");
+	printf("[Debug]:pcalib.txt is saved at: %s\n",pcalib_path.c_str());
+	lg.open(pcalib_path.c_str(), std::ios::trunc | std::ios::out);
 	lg.precision(15);
 	for(int i=0;i<256;i++)
 		lg << G[i] << " ";

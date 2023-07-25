@@ -45,6 +45,7 @@
 #include <fstream>
 #include <dirent.h>
 #include <algorithm>
+#include <string>
 
 
 // reads interpolated element from a uchar* array
@@ -69,7 +70,7 @@ EIGEN_ALWAYS_INLINE float getInterpolatedElement(const float* const mat, const f
 	return res;
 }
 
-void displayImage(float* I, int w, int h, std::string name)
+void displayImage(float* I, int w, int h, std::string name, std::string save_dir)
 {
 	float vmin=1e10;
 	float vmax=-1e10;
@@ -90,8 +91,9 @@ void displayImage(float* I, int w, int h, std::string name)
 
 	printf("plane image values %f - %f!\n", vmin, vmax);
 	cv::imshow(name, img);
-	cv::imwrite("vignetteCalibResult/plane.png", img);
+	cv::imwrite( std::string(save_dir + "/plane.png").c_str(), img);
 }
+
 void displayImageV(float* I, int w, int h, std::string name)
 {
 	cv::Mat img = cv::Mat(h,w,CV_8UC3);
@@ -182,14 +184,25 @@ void parseArgument(char* arg)
 
 
 
-
 int main( int argc, char** argv )
 {
-	for(int i=2; i<argc;i++)
+	for(int i=3; i<argc;i++)
 		parseArgument(argv[i]);
-
-	if(-1 == system("rm -rf vignetteCalibResult")) printf("could not delete old vignetteCalibResult folder!\n");
-	if(-1 == system("mkdir vignetteCalibResult")) printf("could not delete old vignetteCalibResult folder!\n");
+	std::string resualt_save_path;
+	printf("ARGC:%d\n",argc);
+	if(argc == 3){
+		resualt_save_path = std::string(argv [2]);
+		printf("The resualt of this calibration would be save in %s\n", resualt_save_path.c_str());
+	}
+	std::string resualt_dir_name = std::string("/vignetteCalibResult/");
+	printf("resualt_save_path = %s\n",resualt_save_path.c_str());
+	printf("resualt_dir_name = %s\n",resualt_dir_name.c_str());
+	std::string resualt_save_dir = resualt_save_path + resualt_dir_name;
+	printf("resualt_save_dir = %s\n",resualt_save_dir.c_str());
+	std::string rm_resualt = std::string ("rm -rf ") + resualt_save_dir;
+	std::string mkdir_resualt = std::string ("mkdir -p ") + resualt_save_dir;
+	if(-1 == system(rm_resualt.c_str())) printf("could not delete old vignetteCalibResult folder!\n");
+	if(-1 == system(mkdir_resualt.c_str())) printf("could not delete old vignetteCalibResult folder!\n");
 
 	// affine map from plane cordinates to grid coordinates.
 	Eigen::Matrix3f K_p2idx = Eigen::Matrix3f::Identity();
@@ -208,6 +221,7 @@ int main( int argc, char** argv )
 	//Eigen::Matrix3f K = reader->getUndistorter()->getK_rect();
 	w_out = reader->getUndistorter()->getOutputDims()[0];
 	h_out = reader->getUndistorter()->getOutputDims()[1];
+
 
 	aruco::MarkerDetector MDetector;
 
@@ -229,9 +243,9 @@ int main( int argc, char** argv )
 
 	for(int i=0;i<reader->getNumImages();i+=imageSkip)
 	{
-        std::vector<aruco::Marker> Markers;
+		std::vector<aruco::Marker> Markers;
 		ExposureImage* img = reader->getImage(i,true, false, false, false);
-
+		// printf("[Debug]Get Image\n");
 		cv::Mat InImage;
 		cv::Mat(h_out, w_out, CV_32F, img->image).convertTo(InImage, CV_8U, 1, 0);
 		delete img;
@@ -239,8 +253,9 @@ int main( int argc, char** argv )
 		MDetector.detect(InImage,Markers);
 		if(Markers.size() != 1) continue;
 
-        std::vector<cv::Point2f> ptsP;
-        std::vector<cv::Point2f> ptsI;
+		printf("[Debug] tag 213\n");
+		std::vector<cv::Point2f> ptsP;
+		std::vector<cv::Point2f> ptsI;
 		ptsI.push_back(cv::Point2f(Markers[0][0].x, Markers[0][0].y));
 		ptsI.push_back(cv::Point2f(Markers[0][1].x, Markers[0][1].y));
 		ptsI.push_back(cv::Point2f(Markers[0][2].x, Markers[0][2].y));
@@ -263,13 +278,13 @@ int main( int argc, char** argv )
 		H(2,2) = Hcv.at<double>(2,2);
 
 		ExposureImage* imgRaw = reader->getImage(i,false, true, false, false);
+		printf("[Debug] Get image raw\n");
 
 
 		float* plane2imgX = new float[gw*gh];
 		float* plane2imgY = new float[gw*gh];
 
 		Eigen::Matrix3f HK = H*K_p2idx_inverse;
-
 
 		int idx=0;
 		for(int y=0;y<gh;y++)
@@ -282,7 +297,7 @@ int main( int argc, char** argv )
 			}
 
 		reader->getUndistorter()->distortCoordinates(plane2imgX, plane2imgY, gw*gh);
-
+		
 		if(imgRaw->exposure_time == 0) imgRaw->exposure_time = 1;
 
 		float* image = new float[wI*hI];
@@ -325,6 +340,7 @@ int main( int argc, char** argv )
 			}
 
 
+
 		for(int x=0; x<=gw;x+=10)
 			for(int y=0; y<=gh;y+=200)
 			{
@@ -356,12 +372,13 @@ int main( int argc, char** argv )
 				}
 			}
 
+		printf("[Debug] Show image\n");
 		cv::imshow("inRaw",dbgImg);
 
 		if(rand()%40==0)
 		{
 			char buf[1000];
-			snprintf(buf,1000,"vignetteCalibResult/img%d.png",i);
+			snprintf(buf,1000,std::string((resualt_save_dir+std::string("/img%d.png"))).c_str(),i);
 			cv::imwrite(buf, dbgImg);
 		}
 
@@ -373,7 +390,7 @@ int main( int argc, char** argv )
 
 
 	std::ofstream logFile;
-	logFile.open("vignetteCalibResult/log.txt", std::ios::trunc | std::ios::out);
+	logFile.open(resualt_save_dir+std::string("/log.txt"), std::ios::trunc | std::ios::out);
 	logFile.precision(15);
 
 
@@ -445,7 +462,7 @@ int main( int argc, char** argv )
 			else
 				planeColor[pi] = planeColorFC[pi] / planeColorFF[pi];
 		}
-		displayImage(planeColor, gw, gh, "Plane");
+		displayImage(planeColor, gw, gh, "Plane",resualt_save_dir);
 
 		printf("%f residual terms => %f\n", R, sqrtf(E/R));
 
@@ -531,10 +548,6 @@ int main( int argc, char** argv )
 		logFile << it << " " << n << " " << R << " " << sqrtf(E/R) << "\n";
 
 
-
-
-
-
 		// dilate & smoothe vignette by 4 pixel for output.
 		// does not change anything in the optimization; uses vignetteFactorTT and vignetteFactorCT for temporary storing
 		{
@@ -570,7 +583,7 @@ int main( int argc, char** argv )
 				cv::Mat wrap = cv::Mat(hI, wI, CV_32F, vignetteFactorTT)*254.9*254.9;
 				cv::Mat wrap16;
 				wrap.convertTo(wrap16, CV_16U,1,0);
-				cv::imwrite("vignetteCalibResult/vignetteSmoothed.png", wrap16);
+				cv::imwrite(resualt_save_dir + std::string("/vignetteSmoothed.png"), wrap16);
 				cv::waitKey(50);
 			}
 			{
@@ -578,7 +591,7 @@ int main( int argc, char** argv )
 				cv::Mat wrap = cv::Mat(hI, wI, CV_32F, vignetteFactor)*254.9*254.9;
 				cv::Mat wrap16;
 				wrap.convertTo(wrap16, CV_16U,1,0);
-				cv::imwrite("vignetteCalibResult/vignette.png", wrap16);
+				cv::imwrite(resualt_save_dir + std::string("/vignette.png"), wrap16);
 				cv::waitKey(50);
 			}
 		}

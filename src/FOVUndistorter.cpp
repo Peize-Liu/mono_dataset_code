@@ -68,9 +68,15 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 
 
 	// l1 & l2
-	if(std::sscanf(l1.c_str(), "%f %f %f %f %f", &inputCalibration[0], &inputCalibration[1], &inputCalibration[2], &inputCalibration[3], &inputCalibration[4]) == 5 &&
+	if(std::sscanf(l1.c_str(), "%f %f %f %f %f %f %f %f",
+		&inputCalibration[0], &inputCalibration[1], &inputCalibration[2], &inputCalibration[3], 
+		&inputCalibration[4], &inputCalibration[5], &inputCalibration[6], &inputCalibration[7]) == 8 &&
 			std::sscanf(l2.c_str(), "%d %d", &in_width, &in_height) == 2)
 	{
+		inputCalibration[0] = inputCalibration[0]/in_width;
+		inputCalibration[1] = inputCalibration[1]/in_height;
+		inputCalibration[2] = inputCalibration[2]/in_width;
+		inputCalibration[3] = inputCalibration[3]/in_height;
 		printf("Input resolution: %d %d\n",in_width, in_height);
 		printf("Input Calibration (fx fy cx cy): %f %f %f %f %f\n",
 				in_width*inputCalibration[0], in_height*inputCalibration[1], in_width*inputCalibration[2], in_height*inputCalibration[3], inputCalibration[4]);
@@ -128,7 +134,8 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 
 	// =============================== find optimal new camera matrix ===============================
 	// prep warp matrices
-	float dist = inputCalibration[4];
+	float dist = inputCalibration[4]; //original use fov model
+	printf("Debug DIST %f\n",dist);
 	float d2t = 2.0f * tan(dist / 2.0f);
 
 	// current camera parameters
@@ -143,13 +150,16 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 	// find new camera matrix for "crop" and "full"
 	if (inputCalibration[4] == 0)
 	{
+		printf("Debug IN Original\n");
 		ofx = inputCalibration[0] * out_width;
 		ofy = inputCalibration[1] * out_height;
 		ocx = (inputCalibration[2] * out_width) - 0.5;
 		ocy = (inputCalibration[3] * out_height) - 0.5;
+		printf("Debug\n");
 	}
 	else if(outputCalibration[0] == -1)	// "crop"
 	{
+		printf("Debug IN CROP\n");
 		// find left-most and right-most radius
 		float left_radius = (cx)/fx;
 		float right_radius = (in_width-1 - cx)/fx;
@@ -172,6 +182,7 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 	}
 	else if(outputCalibration[0] == -2)	 // "full"
 	{
+		printf("Debug IN FULL\n");
 		float left_radius = cx/fx;
 		float right_radius = (in_width-1 - cx)/fx;
 		float top_radius = cy/fy;
@@ -205,6 +216,7 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 	}
 	else
 	{
+		printf("Debug IN last original\n");
 		ofx = outputCalibration[0] * out_width;
 		ofy = outputCalibration[1] * out_height;
 		ocx = outputCalibration[2] * out_width-0.5;
@@ -216,19 +228,33 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 	outputCalibration[2] = (ocx+0.5) / out_width;
 	outputCalibration[3] = (ocy+0.5) / out_height;
 	outputCalibration[4] = 0;
-
+	
+	printf("outputCalibration with following setting: fx:%f  fy:%f  cx:%f  cy:%f\n",	
+					outputCalibration[0],
+					outputCalibration[1],
+					outputCalibration[2],
+					outputCalibration[3]);
 
 
 
 	// =============================== build rectification map ===============================
+	// Eigen::MatrixXf matrix_remapX(out_width,out_height);
+	// Eigen::MatrixXf matrix_remapY(out_width,out_height);
 	remapX = new float[out_width * out_height];
 	remapY = new float[out_width * out_height];
 	for(int y=0;y<out_height;y++)
 		for(int x=0;x<out_width;x++)
 		{
 			remapX[x+y*out_width] = x;
+			// matrix_remapX(x,y) = x;
 			remapY[x+y*out_width] = y;
+			// matrix_remapY(x,y) =y;
 		}
+	
+	// std::cout<<"matrix_remapX:\n"<< matrix_remapX <<std::endl;
+
+	
+
 	distortCoordinates(remapX, remapY, out_height*out_width);
 
 	bool hasBlackPoints = false;
@@ -246,7 +272,6 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 			hasBlackPoints=true;
 			remapX[i]=-1;
 			remapY[i]=-1;
-
 		}
 	}
 
@@ -283,6 +308,8 @@ void UndistorterFOV::distortCoordinates(float* in_x, float* in_y, int n)
 	{
 		printf("ERROR: invalid UndistorterFOV!\n");
 		return;
+	} else {
+		printf("DEBUG OMNI_RADTAN distorer!\n");
 	}
 
 
@@ -300,20 +327,32 @@ void UndistorterFOV::distortCoordinates(float* in_x, float* in_y, int n)
 	float ocx = outputCalibration[2]*out_width-0.5f;
 	float ocy = outputCalibration[3]*out_height-0.5f;
 
+	float k_1 = inputCalibration[4];
+	float k_2 = inputCalibration[5];
+	float p_1 = inputCalibration[6];
+	float p_2 = inputCalibration[7];
+
+//  Modify FOV to radtan
+
 	for(int i=0;i<n;i++)
 	{
 		float x = in_x[i];
 		float y = in_y[i];
 		float ix = (x - ocx) / ofx;
-		float iy = (y - ocy) / ofy;
+		float iy = (y - ocy) / ofy; //Camera frame
 
 		float r = sqrtf(ix*ix + iy*iy);
-		float fac = (r==0 || dist==0) ? 1 : atanf(r * d2t)/(dist*r);
+		float r2 = ix*ix + iy*iy;
+		float r4 = r2*r2;
+		float xy = ix*iy;
+		float ix2 = ix*ix;
+		float iy2 = iy*iy;
+		float x_d = fx*ix*(1 + k_1*r2 + k_2*r4) + 2*p_1*ix*iy + p_2*(r2 + 2*ix2);
+		float y_d = fy*iy*(1 + k_1*r2 + k_2*r4) + p_1*(r2 + 2*iy2) + 2*p_2*xy;
+		ix = x_d+cx;
+		iy = y_d+cy; //+cx and +cy Conver Camera frame to Buffer frame
 
-		ix = fx*fac*ix+cx;
-		iy = fy*fac*iy+cy;
-
-		in_x[i] = ix;
+		in_x[i] = ix; 
 		in_y[i] = iy;
 	}
 }

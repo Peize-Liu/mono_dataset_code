@@ -187,8 +187,9 @@ public:
 
 	ExposureImage* getImage(int id, bool rectify, bool removeGamma, bool removeVignette, bool nanOverexposed)
 	{
+		printf("[Debug] get Image\n");
 		assert(id >= 0 && id < (int)files.size());
-
+		printf("[Dbug] size\n");
 		cv::Mat imageRaw = getImageRaw_internal(id);
 
 		if(imageRaw.rows != heightOrg || imageRaw.cols != widthOrg)
@@ -239,6 +240,7 @@ public:
 					ret->image[i] = imageRaw.at<uchar>(i);
 			}
 		}
+		printf("[Debug] Return ret\n");
 		return ret;
 	}
 

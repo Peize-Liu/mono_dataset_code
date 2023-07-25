@@ -84,8 +84,8 @@ public:
 private:
 	Eigen::Matrix3f Krect;
 	Eigen::Matrix3f Korg;
-	float inputCalibration[5];
-	float outputCalibration[5];
+	float inputCalibration[8];
+	float outputCalibration[8];
 	int out_width, out_height;
 	int in_width, in_height;
 

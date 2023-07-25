@@ -108,14 +108,6 @@ PhotometricUndistorter::PhotometricUndistorter(
 	G[255] = 255;
 	f.close();
 	validGamma=true;
-
-
-
-
-
-
-
-
 	printf("Reading Vignette Image from %s\n",vignetteImage.c_str());
 	cv::Mat vignetteMat = cv::imread(vignetteImage.c_str(), CV_LOAD_IMAGE_UNCHANGED);
 	vignetteMap = new float[w*h];
