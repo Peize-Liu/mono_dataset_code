@@ -1,4 +1,14 @@
+# How to use Docker image
+### Step 1
+Build local image first with command ` docker build -t photometric_calibration:latest -f ./photomatric_calibration.dockerfile . `   in current dir.
 
+### Step 2
+
+Modify `./start_docker_container.sh` with your local dir path (*defualt setting is for my workstation!!!*)
+
+Run with paramter
+`./start_docker_container.sh 0` to run for application, everything you modify will not be saved
+`./start_docker_container.sh 1` run for development, you can modify code for your own application all files in this dir will be saved
 
 # Install
 
@@ -20,13 +30,11 @@
 see eg here: 
 
     http://maztories.blogspot.de/2013/07/installing-aruco-augmented-reality.html 
-    
+
 tested with version 1.3.0. which is included in /thirdparty.
 
 #### 4. Build
     cmake . && make
-
-
 
 
 
