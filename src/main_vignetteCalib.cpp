@@ -239,21 +239,26 @@ int main( int argc, char** argv )
 	meanExposure = meanExposure/reader->getNumImages();
 
 	if(meanExposure==0) meanExposure = 1;
-
+	printf("Get Number image loop\n");
 
 	for(int i=0;i<reader->getNumImages();i+=imageSkip)
 	{
 		std::vector<aruco::Marker> Markers;
-		ExposureImage* img = reader->getImage(i,true, false, false, false);
-		// printf("[Debug]Get Image\n");
+		ExposureImage* img = reader->getImage(i,true, false, false, false); //TODO: Image get from this function is not right
 		cv::Mat InImage;
+		cv::Mat in_put_img(h_out, w_out, CV_32F, img->image);
+
 		cv::Mat(h_out, w_out, CV_32F, img->image).convertTo(InImage, CV_8U, 1, 0);
+	  cv::imshow("reader return picture",InImage);
+		//TODO: add a image show
 		delete img;
-
 		MDetector.detect(InImage,Markers);
-		if(Markers.size() != 1) continue;
+		if(Markers.size() != 1){
+			printf("[Debug] continue marker size:%d\n",Markers.size());
+			continue;
+		} 
 
-		printf("[Debug] tag 213\n");
+
 		std::vector<cv::Point2f> ptsP;
 		std::vector<cv::Point2f> ptsI;
 		ptsI.push_back(cv::Point2f(Markers[0][0].x, Markers[0][0].y));
@@ -278,8 +283,6 @@ int main( int argc, char** argv )
 		H(2,2) = Hcv.at<double>(2,2);
 
 		ExposureImage* imgRaw = reader->getImage(i,false, true, false, false);
-		printf("[Debug] Get image raw\n");
-
 
 		float* plane2imgX = new float[gw*gh];
 		float* plane2imgY = new float[gw*gh];
@@ -297,8 +300,11 @@ int main( int argc, char** argv )
 			}
 
 		reader->getUndistorter()->distortCoordinates(plane2imgX, plane2imgY, gw*gh);
-		
-		if(imgRaw->exposure_time == 0) imgRaw->exposure_time = 1;
+		printf("[Debug] get distort\n");
+		if(imgRaw->exposure_time == 0){
+			imgRaw->exposure_time = 1;
+			printf("exposure time 0\n");
+		}
 
 		float* image = new float[wI*hI];
 		for(int y=0; y<hI;y++)
@@ -407,6 +413,7 @@ int main( int argc, char** argv )
 	// initialize vignette factors to 1.
 	for(int i=0;i<hI*wI;i++) vignetteFactor[i] = 1;
 
+	printf("Get Number Max loop\n");
 	double E=0;
 	double R=0;
 	for(int it=0;it<maxIterations;it++)
@@ -462,6 +469,7 @@ int main( int argc, char** argv )
 			else
 				planeColor[pi] = planeColorFC[pi] / planeColorFF[pi];
 		}
+
 		displayImage(planeColor, gw, gh, "Plane",resualt_save_dir);
 
 		printf("%f residual terms => %f\n", R, sqrtf(E/R));

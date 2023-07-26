@@ -45,6 +45,7 @@ public:
 	template<typename T>
 	void undistort(const T* input, float* output, int nPixIn, int nPixOut) const;
 	void distortCoordinates(float* in_x, float* in_y, int n);
+	void undistort(char* input_data, char* output_data);
 
 	inline Eigen::Matrix3f getK_rect() const
 	{
@@ -84,6 +85,9 @@ public:
 private:
 	Eigen::Matrix3f Krect;
 	Eigen::Matrix3f Korg;
+
+	cv::Mat K;
+	cv::Mat dist_coeffes;
 	float inputCalibration[8];
 	float outputCalibration[8];
 	int out_width, out_height;

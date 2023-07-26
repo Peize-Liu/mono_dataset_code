@@ -187,11 +187,12 @@ public:
 
 	ExposureImage* getImage(int id, bool rectify, bool removeGamma, bool removeVignette, bool nanOverexposed)
 	{
-		printf("[Debug] get Image\n");
+		// printf("[Debug] get Image\n");
 		assert(id >= 0 && id < (int)files.size());
-		printf("[Dbug] size\n");
-		cv::Mat imageRaw = getImageRaw_internal(id);
-
+		// printf("[Dbug] size\n");
+		cv::Mat imageRaw = getImageRaw_internal(id); //CV_8U
+		// cv::imshow("raw",imageRaw);
+		// cv::waitKey(1);
 		if(imageRaw.rows != heightOrg || imageRaw.cols != widthOrg)
 		{
 			printf("ERROR: expected cv-mat to have dimensions %d x %d; found %d x %d (image %s)!\n",
@@ -228,9 +229,17 @@ public:
 		{
 			if(rectify)
 			{
+				printf("[Debug] rectify\n");
 				// rect only.
+				printf("[Debug] Exposure Image width:%d height %d\n",width,height);
 				ret = new ExposureImage(width, height, timestamps[id], exposures[id], id);
+
+				cv::imshow("send in raw",imageRaw);
+				cv::waitKey(1);
+				printf("image raw type:%d\n",imageRaw.type());
 				undistorter->undistort<unsigned char>(imageRaw.data, ret->image, widthOrg*heightOrg, width*height);
+				cv::Mat out_put(heightOrg,widthOrg, CV_32FC1, ret->image);
+				cv::imshow("undistorted Image", out_put);
 			}
 			else
 			{
@@ -240,7 +249,7 @@ public:
 					ret->image[i] = imageRaw.at<uchar>(i);
 			}
 		}
-		printf("[Debug] Return ret\n");
+		// printf("[Debug] Return ret\n");
 		return ret;
 	}
 

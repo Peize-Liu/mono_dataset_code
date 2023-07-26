@@ -43,6 +43,7 @@ public:
 		: timestamp(timestamp_), w(w_), h(h_), exposure_time(exposure_), id(id_)
 	{
 		image = new float[w*h];
+		memset(image, 0, w*h);
 	}
 	inline ~ExposureImage()
 	{

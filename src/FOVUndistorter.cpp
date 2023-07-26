@@ -236,7 +236,6 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 					outputCalibration[3]);
 
 
-
 	// =============================== build rectification map ===============================
 	// Eigen::MatrixXf matrix_remapX(out_width,out_height);
 	// Eigen::MatrixXf matrix_remapY(out_width,out_height);
@@ -264,11 +263,11 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 		if(remapY[i] == 0) remapY[i] = 0.01;
 		if(remapX[i] == in_width-1) remapX[i] = in_width-1.01;
 		if(remapY[i] == in_height-1) remapY[i] = in_height-1.01;
-
-
+		// printf("No black\n");
 		if(!(remapX[i] > 0 && remapY[i] > 0 && remapX[i] < in_width-1 &&  remapY[i] < in_height-1))
 		{
-			//printf("black pixel at %d %d %f %f!\n", i, i, remapX[i], remapY[i]);
+			printf("black point\n");
+			// printf("black pixel at %d %d %f %f!\n", i, i, remapX[i], remapY[i]);
 			hasBlackPoints=true;
 			remapX[i]=-1;
 			remapY[i]=-1;
@@ -291,6 +290,12 @@ UndistorterFOV::UndistorterFOV(const char* configFileName)
 	Korg(1,1) = inputCalibration[1] * in_height;
 	Korg(0,2) = inputCalibration[2] * in_width-0.5;
 	Korg(1,2) = inputCalibration[3] * in_height-0.5;
+
+
+	printf("[Debug]xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n");
+	// for(int i= 0 ; i < 3000; i=+5){
+	// 	// printf("remap x :%f %f %f %f %f\n",remapX[i],remapX[i+1],remapX[i+2],remapX[i+3],remapX[i+4]);
+	// }
 }
 
 
@@ -312,7 +317,8 @@ void UndistorterFOV::distortCoordinates(float* in_x, float* in_y, int n)
 		printf("DEBUG OMNI_RADTAN distorer!\n");
 	}
 
-
+#if 1
+	printf("[Debug] using radtan\n");
 	float dist = inputCalibration[4];
 	float d2t = 2.0f * tan(dist / 2.0f);
 
@@ -332,35 +338,82 @@ void UndistorterFOV::distortCoordinates(float* in_x, float* in_y, int n)
 	float p_1 = inputCalibration[6];
 	float p_2 = inputCalibration[7];
 
-//  Modify FOV to radtan
+// radtan
 
 	for(int i=0;i<n;i++)
 	{
 		float x = in_x[i];
 		float y = in_y[i];
-		float ix = (x - ocx) / ofx;
-		float iy = (y - ocy) / ofy; //Camera frame
+		float ix = (x - cx) / fx;
+		float iy = (y - cy) / fy; //Camera frame
 
-		float r = sqrtf(ix*ix + iy*iy);
-		float r2 = ix*ix + iy*iy;
-		float r4 = r2*r2;
-		float xy = ix*iy;
-		float ix2 = ix*ix;
-		float iy2 = iy*iy;
-		float x_d = fx*ix*(1 + k_1*r2 + k_2*r4) + 2*p_1*ix*iy + p_2*(r2 + 2*ix2);
-		float y_d = fy*iy*(1 + k_1*r2 + k_2*r4) + p_1*(r2 + 2*iy2) + 2*p_2*xy;
+		// float r = sqrtf(ix*ix + iy*iy);
+		double r2 = ix*ix + iy*iy;
+		double r4 = r2*r2;
+		double xy = ix*iy;
+		double ix2 = ix*ix;
+		double iy2 = iy*iy;
+		double x_d = fx*(ix*(1 + k_1*r2 + k_2*r4) + 2*p_1*ix*iy + p_2*(r2 + 2*ix2));
+		double y_d = fy*(iy*(1 + k_1*r2 + k_2*r4) + p_1*(r2 + 2*iy2) + 2*p_2*xy);
 		ix = x_d+cx;
 		iy = y_d+cy; //+cx and +cy Conver Camera frame to Buffer frame
 
 		in_x[i] = ix; 
 		in_y[i] = iy;
+		// printf("pixel:%d  x: %f ix:%f y: %f iy:%f\n",i , x,ix,y,iy);
+
 	}
+#else
+
+	// if(!valid)
+	// {
+	// 	printf("ERROR: invalid UndistorterFOV!\n");
+	// 	return;
+	// }
+	// printf("[Debug] using FOV xxxxxxxxxxxxxxxxxxx\n");
+
+
+	// float dist = inputCalibration[4];
+	// float d2t = 2.0f * tan(dist / 2.0f);
+
+	// // current camera parameters
+	// float fx = inputCalibration[0] * in_width;
+	// float fy = inputCalibration[1] * in_height;
+	// float cx = inputCalibration[2] * in_width - 0.5;
+	// float cy = inputCalibration[3] * in_height - 0.5;
+
+	// float ofx = outputCalibration[0]*out_width;
+	// float ofy = outputCalibration[1]*out_height;
+	// float ocx = outputCalibration[2]*out_width-0.5f;
+	// float ocy = outputCalibration[3]*out_height-0.5f;
+
+
+
+	// for(int i=0;i<n;i++)
+	// {
+	// 	float x = in_x[i];
+	// 	float y = in_y[i];
+	// 	float ix = (x - ocx) / ofx;
+	// 	float iy = (y - ocy) / ofy;
+
+	// 	float r = sqrtf(ix*ix + iy*iy);
+	// 	float fac = (r==0 || dist==0) ? 1 : atanf(r * d2t)/(dist*r);
+
+	// 	ix = fx*fac*ix+cx;
+	// 	iy = fy*fac*iy+cy;
+
+	// 	in_x[i] = ix;
+	// 	in_y[i] = iy;
+	// }
+#endif
 }
 
 
 template<typename T>
-void UndistorterFOV::undistort(const T* input, float* output, int nPixIn, int nPixOut) const
+void UndistorterFOV::undistort(const T* input, float* output, int nPixIn, int nPixOut) const //TODO modify this function with opencv provided
 {
+#if 1
+	printf("[debug] into distortor\n");
 	if(!valid) return;
 
 	if(nPixIn != in_width*in_height)
@@ -377,22 +430,27 @@ void UndistorterFOV::undistort(const T* input, float* output, int nPixIn, int nP
 	}
 
 
+
 	for(int idx = 0; idx < out_width*out_height;idx++)
 	{
 		// get interp. values
 		float xx = remapX[idx];
+		// printf("xx :%f\n",xx);
 		float yy = remapY[idx];
 
-		if(xx<0)
+		if(xx<0){
 			output[idx] = 0;
-		else
+			// printf("xx < 0 , remapX[idx] = %f\n",remapX[idx]);
+		} else
 		{
+			// printf("coneverted\n");
 			// get integer and rational parts
 			int xxi = xx;
 			int yyi = yy;
 			xx -= xxi;
 			yy -= yyi;
 			float xxyy = xx*yy;
+			// printf("xxyy%f\n",xxyy);
 
 			// get array base pointer
 			const T* src = input + xxi + yyi * in_width;
@@ -402,8 +460,21 @@ void UndistorterFOV::undistort(const T* input, float* output, int nPixIn, int nP
 								+ (yy-xxyy) * src[in_width]
 								+ (xx-xxyy) * src[1]
 								+ (1-xx-yy+xxyy) * src[0];
+			// printf("output[idx]:%f\n",output[idx]);
 		}
 	}
+	printf("[Debug] remap finished\n");
+#else
+
+#endif
 }
+
 template void UndistorterFOV::undistort<float>(const float* input, float* output, int nPixIn, int nPixOut) const;
 template void UndistorterFOV::undistort<unsigned char>(const unsigned char* input, float* output, int nPixIn, int nPixOut) const;
+
+void UndistorterFOV::undistort(char* input_data, char* output_data){
+	cv::Mat input_img(in_width,in_height,CV_8U,input_data);
+	cv::imshow("distort_input",input_img);
+	
+}
+
