@@ -1,4 +1,7 @@
 # How to use Docker image
+
+download from [sample_data_set](https://drive.google.com/drive/u/0/folders/1zkoU91-DGoDyWFAgJs8TELUl3NHMCZC4?hl=zh-TW) 
+
 ### Step 1
 Build local image first with command ` docker build -t photometric_calibration:latest -f ./photomatric_calibration.dockerfile . `   in current dir.
 
@@ -9,6 +12,25 @@ Modify `./start_docker_container.sh` with your local dir path (*defualt setting 
 Run with paramter
 `./start_docker_container.sh 0` to run for application, everything you modify will not be saved
 `./start_docker_container.sh 1` run for development, you can modify code for your own application all files in this dir will be saved
+
+### Step 3  Response function calibration
+
+1. prepare your dataset like 
+
+   ![image-20230829160414817](https://raw.githubusercontent.com/Peize-Liu/my-images/master/202308291604835.png)
+
+2. camera.txt:
+   ![image-20230829160619717](https://raw.githubusercontent.com/Peize-Liu/my-images/master/202308291606762.png)
+3. run ./responseCalib get  calibration result (pcalib.txt)
+
+### Step 4 Vig calibration
+
+1. prepare your dataset like (./data/vig_calibration)![image-20230829160841688](https://raw.githubusercontent.com/Peize-Liu/my-images/master/202308291608720.png)
+
+2. run calibration
+
+> refer to ./data/response_calibration for more clear file tree
+
 
 # Install
 
